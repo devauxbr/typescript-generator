@@ -6,6 +6,7 @@ import cz.habarta.typescript.generator.util.Utils;
 import java.lang.reflect.*;
 import java.math.*;
 import java.util.*;
+import javax.xml.bind.JAXBElement;
 
 
 public class DefaultTypeProcessor implements TypeProcessor {
@@ -13,6 +14,22 @@ public class DefaultTypeProcessor implements TypeProcessor {
     @Override
     public Result processType(Type javaType, Context context) {
         if (KnownTypes.containsKey(javaType)) return new Result(KnownTypes.get(javaType));
+        if (javaType instanceof Class) {
+            final Class<?> javaClass = (Class<?>) javaType;
+            if (JavaTimeTemporal != null && JavaTimeTemporal.isAssignableFrom(javaClass)) {
+                return new Result(TsType.Date);
+            }
+        }
+        if (javaType instanceof ParameterizedType) {
+            final ParameterizedType parameterizedType = (ParameterizedType) javaType;
+            if (parameterizedType.getRawType() instanceof Class) {
+                final Class<?> javaClass = (Class<?>) parameterizedType.getRawType();
+                if (JAXBElement.class.isAssignableFrom(javaClass)) {
+                    final Result result = context.processType(parameterizedType.getActualTypeArguments()[0]);
+                    return new Result(result.getTsType(), result.getDiscoveredClasses());
+                }
+            }
+        }
         // map JAX-RS standard types to `any`
         for (Class<?> cls : JaxrsApplicationParser.getStandardEntityClasses()) {
             final Class<?> rawClass = Utils.getRawClassOrNull(javaType);
@@ -38,7 +55,7 @@ public class DefaultTypeProcessor implements TypeProcessor {
             if (javaClass.getName().equals("java.util.OptionalInt") ||
                     javaClass.getName().equals("java.util.OptionalLong") ||
                     javaClass.getName().equals("java.util.OptionalDouble")) {
-                return new Result(TsType.Number);
+                return new Result(TsType.Number.optional());
             }
             // generic structural type used without type arguments
             if (javaClass.getTypeParameters().length > 0) {
@@ -64,7 +81,8 @@ public class DefaultTypeProcessor implements TypeProcessor {
                     return new Result(new TsType.IndexedArrayType(TsType.String, result.getTsType()), result.getDiscoveredClasses());
                 }
                 if (javaClass.getName().equals("java.util.Optional")) {
-                    return context.processType(parameterizedType.getActualTypeArguments()[0]);
+                    final Result result = context.processType(parameterizedType.getActualTypeArguments()[0]);
+                    return new Result(result.getTsType().optional(), result.getDiscoveredClasses());
                 }
                 // generic structural type
                 final List<Class<?>> discoveredClasses = new ArrayList<>();
@@ -125,17 +143,19 @@ public class DefaultTypeProcessor implements TypeProcessor {
         knownTypes.put(BigInteger.class, TsType.Number);
         knownTypes.put(Date.class, TsType.Date);
         knownTypes.put(UUID.class, TsType.String);
-
-        // joda time (if present)
-        try {
-            final Class<?> jodaTimeClass = Class.forName("org.joda.time.DateTime");
-            knownTypes.put(jodaTimeClass, TsType.Date);
-        } catch (ClassNotFoundException e) {
-            // ignore if joda time is not present
-        }
         return knownTypes;
     }
 
     private static final Map<Type, TsType> KnownTypes = getKnownTypes();
+
+    private static Class<?> getTemporalIfAvailable() {
+        try {
+            return Class.forName("java.time.temporal.Temporal");
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+    }
+
+    private static final Class<?> JavaTimeTemporal = getTemporalIfAvailable();
 
 }
