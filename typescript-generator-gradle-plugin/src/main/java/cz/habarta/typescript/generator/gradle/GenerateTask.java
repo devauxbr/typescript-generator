@@ -62,6 +62,7 @@ public class GenerateTask extends DefaultTask {
     public String npmName;
     public String npmVersion;
     public StringQuotes stringQuotes;
+    public String indentString;
     public boolean displaySerializerWarning = true;
     @Deprecated public boolean disableJackson2ModuleDiscovery;
     public boolean jackson2ModuleDiscovery;
@@ -139,6 +140,7 @@ public class GenerateTask extends DefaultTask {
         settings.npmName = npmName != null && generateNpmPackageJson ? getProject().getName() : npmName;
         settings.npmVersion = npmVersion != null && generateNpmPackageJson ? settings.getDefaultNpmVersion() : npmVersion;
         settings.setStringQuotes(stringQuotes);
+        settings.setIndentString(indentString);
         settings.displaySerializerWarning = displaySerializerWarning;
         settings.disableJackson2ModuleDiscovery = disableJackson2ModuleDiscovery;
         settings.jackson2ModuleDiscovery = jackson2ModuleDiscovery;

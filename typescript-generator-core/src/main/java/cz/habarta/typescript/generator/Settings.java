@@ -57,6 +57,7 @@ public class Settings {
     public String restResponseType = null;
     public String restOptionsType = null;
     public boolean restOptionsTypeIsGeneric;
+    public boolean experimentalJsonDeserialization;
     public TypeProcessor customTypeProcessor = null;
     public boolean sortDeclarations = false;
     public boolean sortTypeDeclarations = false;
@@ -101,6 +102,10 @@ public class Settings {
 
     public void setStringQuotes(StringQuotes quotes) {
         this.quotes = quotes == StringQuotes.singleQuotes ? "'" : "\"";
+    }
+
+    public void setIndentString(String indentString) {
+        this.indentString = indentString != null ? indentString : "    ";
     }
 
     public void loadCustomTypeProcessor(ClassLoader classLoader, String customTypeProcessor) {
@@ -231,6 +236,9 @@ public class Settings {
         }
         if (restOptionsType != null && !generateJaxrs) {
             throw new RuntimeException("'restOptionsType' parameter can only be used when generating JAX-RS client or interface.");
+        }
+        if (experimentalJsonDeserialization && disableTaggedUnions) {
+            throw new RuntimeException("'experimentalJsonDeserialization' parameter cannot be used when `disableTaggedUnions` is true.");
         }
         if (generateNpmPackageJson && outputKind != TypeScriptOutputKind.module) {
             throw new RuntimeException("'generateNpmPackageJson' can only be used when generating proper module ('outputKind' parameter is 'module').");
