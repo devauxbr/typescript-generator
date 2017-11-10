@@ -19,9 +19,9 @@ public class AngularClientExtension extends EmitterExtension {
         features.generatesJaxrsApplicationClient = true;
         features.restResponseType = "Observable<R>";
         Map<String, String> npmPackageDependencies = new HashMap<>();
-        npmPackageDependencies.put("@angular/core", "^4.0.0");
-        npmPackageDependencies.put("@angular/http", "^4.0.0");
-        npmPackageDependencies.put("rxjs", "^5.4.1");
+        npmPackageDependencies.put("@angular/core", "^5.0.0");
+        npmPackageDependencies.put("@angular/common", "^5.0.0");
+        npmPackageDependencies.put("rxjs", "^5.5.0");
         features.npmPackageDependencies = npmPackageDependencies;
         return features;
     }
