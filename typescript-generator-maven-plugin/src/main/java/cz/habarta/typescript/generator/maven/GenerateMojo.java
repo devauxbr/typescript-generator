@@ -273,7 +273,8 @@ public class GenerateMojo extends AbstractMojo {
     private boolean nonConstEnums;
 
     /**
-     * Specifies whether classes will be mapped to classes or interfaces.
+     * Specifies whether Java classes will be mapped to TypeScript classes or interfaces.
+     * Java interfaces are always mapped as TypeScript interfaces.
      * Supported values are:
      * <ul>
      * <li><code>asInterfaces</code></li>
@@ -281,9 +282,19 @@ public class GenerateMojo extends AbstractMojo {
      * </ul>
      * Default value is <code>asInterfaces</code>.<br>
      * Value <code>asClasses</code> can only be used in implementation files (.ts).
+     * It is also possible to generate mix of classes and interfaces by setting this parameter to <code>asClasses</code> value
+     * and specifying which classes should be mapped as classes using <code>mapClassesAsClassesPatterns</code> parameter.
      */
     @Parameter
     private ClassMapping mapClasses;
+
+    /**
+     * Specifies which Java classes should be mapped as TypeScript classes.
+     * Classes which are matched by any of these patters are mapped as classes otherwise they are mapped as interfaces.
+     * This parameter can only be used when <code>mapClasses</code> parameter is set to <code>asClasses</code> value.
+     */
+    @Parameter
+    private List<String> mapClassesAsClassesPatterns;
 
     /**
      * If <code>true</code> tagged unions will not be generated for Jackson 2 polymorphic types.
@@ -401,9 +412,22 @@ public class GenerateMojo extends AbstractMojo {
      *   - generates type-safe property path getters</li>
      * <li><code>cz.habarta.typescript.generator.ext.TypeGuardsForJackson2PolymorphismExtension}</code></li>
      * </ul>
+     * Parameter {@link #extensionsWithConfiguration} can be used in case extension needs some configuration.
      */
     @Parameter
     private List<String> extensions;
+
+    /**
+     * List of extensions with their configurations.
+     * This parameter has the same purpose as {@link #extensions} parameter.
+     * Each item of this list has
+     * <ul>
+     * <li><code>className</code> - required fully-qualified class name of the extension</li>
+     * <li><code>configuration</code> - optional <code>Map</code> with <code>String</code> keys and <code>String</code> values</li>
+     * </ul>
+     */
+    @Parameter
+    private List<Settings.ConfiguredExtension> extensionsWithConfiguration;
 
     /**
      * The presence of any annotation in this list on a JSON property will cause
@@ -533,6 +557,7 @@ public class GenerateMojo extends AbstractMojo {
             settings.mapEnum = mapEnum;
             settings.nonConstEnums = nonConstEnums;
             settings.mapClasses = mapClasses;
+            settings.mapClassesAsClassesPatterns = mapClassesAsClassesPatterns;
             settings.disableTaggedUnions = disableTaggedUnions;
             settings.ignoreSwaggerAnnotations = ignoreSwaggerAnnotations;
             settings.generateJaxrsApplicationInterface = generateJaxrsApplicationInterface;
@@ -546,7 +571,7 @@ public class GenerateMojo extends AbstractMojo {
             settings.sortTypeDeclarations = sortTypeDeclarations;
             settings.noFileComment = noFileComment;
             settings.javadocXmlFiles = javadocXmlFiles;
-            settings.loadExtensions(classLoader, extensions);
+            settings.loadExtensions(classLoader, extensions, extensionsWithConfiguration);
             settings.loadIncludePropertyAnnotations(classLoader, includePropertyAnnotations);
             settings.loadOptionalAnnotations(classLoader, optionalAnnotations);
             settings.generateNpmPackageJson = generateNpmPackageJson;

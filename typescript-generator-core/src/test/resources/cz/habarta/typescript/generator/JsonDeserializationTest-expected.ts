@@ -9,6 +9,9 @@ export class User {
     taggedAddresses: { [index: string]: Address };
     groupedAddresses: { [index: string]: Address[] };
     listOfTaggedAddresses: { [index: string]: Address }[];
+    tags: string[];
+    mapping: { [index: string]: string };
+    listOfListOfString: string[][];
     orders: PagedList<Order, Authentication>;
     allOrders: PagedList<Order, Authentication>[];
     shape: ShapeUnion;
@@ -18,7 +21,7 @@ export class User {
         if (!data) {
             return data;
         }
-        const instance = target || new User(); 
+        const instance = target || new User();
         instance.name = data.name;
         instance.authentication = data.authentication;
         instance.childAccount = data.childAccount;
@@ -28,8 +31,11 @@ export class User {
         instance.taggedAddresses = __getCopyObjectFn(Address.fromData)(data.taggedAddresses);
         instance.groupedAddresses = __getCopyObjectFn(__getCopyArrayFn(Address.fromData))(data.groupedAddresses);
         instance.listOfTaggedAddresses = __getCopyArrayFn(__getCopyObjectFn(Address.fromData))(data.listOfTaggedAddresses);
-        instance.orders = PagedList.fromDataFn<Order, Authentication>(Order.fromData, __identity)(data.orders);
-        instance.allOrders = __getCopyArrayFn(PagedList.fromDataFn<Order, Authentication>(Order.fromData, __identity))(data.allOrders);
+        instance.tags = __getCopyArrayFn(__identity<string>())(data.tags);
+        instance.mapping = __getCopyObjectFn(__identity<string>())(data.mapping);
+        instance.listOfListOfString = __getCopyArrayFn(__getCopyArrayFn(__identity<string>()))(data.listOfListOfString);
+        instance.orders = PagedList.fromDataFn<Order, Authentication>(Order.fromData, __identity<Authentication>())(data.orders);
+        instance.allOrders = __getCopyArrayFn(PagedList.fromDataFn<Order, Authentication>(Order.fromData, __identity<Authentication>()))(data.allOrders);
         instance.shape = Shape.fromDataUnion(data.shape);
         instance.shapes = __getCopyArrayFn(Shape.fromDataUnion)(data.shapes);
         return instance;
@@ -56,18 +62,18 @@ export class PagedList<T, A> {
     items: T[];
     additionalInfo: A;
 
-    static fromDataFn<T, A>(constructorFnT: (data: T) => T, constructorFnA: (data: A) => A): (data: PagedList<T, A>) => PagedList<T, A> {
-        return (data: PagedList<T, A>) => PagedList.fromData(data, constructorFnT, constructorFnA);
+    static fromDataFn<T, A>(constructorFnOfT: (data: T) => T, constructorFnOfA: (data: A) => A): (data: PagedList<T, A>) => PagedList<T, A> {
+        return data => PagedList.fromData(data, constructorFnOfT, constructorFnOfA);
     }
 
-    static fromData<T, A>(data: PagedList<T, A>, constructorFnT: (data: T) => T, constructorFnA: (data: A) => A, target?: PagedList<T, A>): PagedList<T, A> {
+    static fromData<T, A>(data: PagedList<T, A>, constructorFnOfT: (data: T) => T, constructorFnOfA: (data: A) => A, target?: PagedList<T, A>): PagedList<T, A> {
         if (!data) {
             return data;
         }
         const instance = target || new PagedList<T, A>();
         instance.page = data.page;
-        instance.items = __copyArray(data.items, constructorFnT);
-        instance.additionalInfo = constructorFnA(data.additionalInfo);
+        instance.items = __getCopyArrayFn(constructorFnOfT)(data.items);
+        instance.additionalInfo = constructorFnOfA(data.additionalInfo);
         return instance;
     }
 }
@@ -204,6 +210,6 @@ function __copyObject<T>(object: { [index: string]: T }, itemCopyFn: (item: T) =
     return result;
 }
 
-function __identity<T>(value: T): T {
-    return value;
+function __identity<T>(): (value: T) => T {
+    return value => value;
 }

@@ -107,10 +107,22 @@ public class Emitter implements EmitterExtension.Writer {
         emitLiteralEnums(model, exportKeyword, declareKeyword);
         emitHelpers(model);
         for (EmitterExtension emitterExtension : settings.extensions) {
-            writeNewLine();
-            writeNewLine();
-            writeIndentedLine(String.format("// Added by '%s' extension", emitterExtension.getClass().getSimpleName()));
-            emitterExtension.emitElements(this, settings, exportKeyword, model);
+            final List<String> extensionLines = new ArrayList<>();
+            final EmitterExtension.Writer extensionWriter = new EmitterExtension.Writer() {
+                @Override
+                public void writeIndentedLine(String line) {
+                    extensionLines.add(line);
+                }
+            };
+            emitterExtension.emitElements(extensionWriter, settings, exportKeyword, model);
+            if (!extensionLines.isEmpty()) {
+                writeNewLine();
+                writeNewLine();
+                writeIndentedLine(String.format("// Added by '%s' extension", emitterExtension.getClass().getSimpleName()));
+                for (String line : extensionLines) {
+                    this.writeIndentedLine(line);
+                }
+            }
         }
     }
 
@@ -235,14 +247,7 @@ public class Emitter implements EmitterExtension.Writer {
         emitComments(method.getComments());
         final String staticString = method.getModifiers().isStatic ? "static " : "";
         final String typeParametersString = method.getTypeParameters().isEmpty() ? "" : "<" + formatList(settings, method.getTypeParameters()) + ">";
-        final List<String> parameters = new ArrayList<>();
-        for (TsParameterModel parameter : method.getParameters()) {
-            final String access = parameter.getAccessibilityModifier() != null ? parameter.getAccessibilityModifier().format() + " " : "";
-            final String questionMark = (parameter.getTsType() instanceof TsType.OptionalType) ? "?" : "";
-            final String type = parameter.getTsType() != null ? ": " + parameter.getTsType() : "";
-            parameters.add(access + parameter.getName() + questionMark + type);
-        }
-        final String parametersString = "(" + Utils.join(parameters, ", ") + ")";
+        final String parametersString = formatParameterList(method.getParameters(), true);
         final String type = method.getReturnType() != null ? ": " + method.getReturnType() : "";
         final String signature = staticString + method.getName() + typeParametersString + parametersString + type;
         if (method.getBody() != null) {
@@ -254,6 +259,23 @@ public class Emitter implements EmitterExtension.Writer {
         } else {
             writeIndentedLine(signature + ";");
         }
+    }
+
+    public static String formatParameterList(List<? extends TsParameter> parameters, boolean alwaysEncloseInParentheses) {
+        final List<String> params = new ArrayList<>();
+        for (TsParameter parameter : parameters) {
+            final TsAccessibilityModifier accessibilityModifier = parameter instanceof TsParameterModel
+                    ? ((TsParameterModel) parameter).getAccessibilityModifier()
+                    : null;
+            final String access = accessibilityModifier != null ? accessibilityModifier.format() + " " : "";
+            final String questionMark = (parameter.getTsType() instanceof TsType.OptionalType) ? "?" : "";
+            final String type = parameter.getTsType() != null ? ": " + parameter.getTsType() : "";
+            params.add(access + parameter.getName() + questionMark + type);
+        }
+        boolean parentheses = alwaysEncloseInParentheses || (parameters.size() != 1 || parameters.get(0).tsType != null);
+        return parentheses
+                ? "(" + Utils.join(params, ", ") + ")"
+                : Utils.join(params, ", ");
     }
 
     private void emitStatements(List<TsStatement> statements) {

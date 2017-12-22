@@ -6,6 +6,7 @@ import cz.habarta.typescript.generator.emitter.Emitter;
 import cz.habarta.typescript.generator.emitter.EmitterExtension;
 import cz.habarta.typescript.generator.emitter.EmitterExtensionFeatures;
 import cz.habarta.typescript.generator.util.Predicate;
+import cz.habarta.typescript.generator.util.Utils;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.net.URL;
@@ -47,6 +48,8 @@ public class Settings {
     public EnumMapping mapEnum; // default is EnumMapping.asUnion
     public boolean nonConstEnums = false;
     public ClassMapping mapClasses; // default is ClassMapping.asInterfaces
+    public List<String> mapClassesAsClassesPatterns;
+    private Predicate<String> mapClassesAsClassesFilter = null;
     public boolean disableTaggedUnions = false;
     public boolean ignoreSwaggerAnnotations = false;
     public boolean generateJaxrsApplicationInterface = false;
@@ -57,7 +60,6 @@ public class Settings {
     public String restResponseType = null;
     public String restOptionsType = null;
     public boolean restOptionsTypeIsGeneric;
-    public boolean experimentalJsonDeserialization;
     public TypeProcessor customTypeProcessor = null;
     public boolean sortDeclarations = false;
     public boolean sortTypeDeclarations = false;
@@ -79,6 +81,10 @@ public class Settings {
 
     private boolean defaultStringEnumsOverriddenByExtension = false;
 
+    public static class ConfiguredExtension {
+        public String className;
+        public Map<String, String> configuration;
+    }
 
     private static class TypeScriptGeneratorURLClassLoader extends URLClassLoader {
 
@@ -114,9 +120,20 @@ public class Settings {
         }
     }
 
-    public void loadExtensions(ClassLoader classLoader, List<String> extensions) {
+    public void loadExtensions(ClassLoader classLoader, List<String> extensions, List<Settings.ConfiguredExtension> extensionsWithConfiguration) {
+        this.extensions = new ArrayList<>();
         if (extensions != null) {
-            this.extensions = loadInstances(classLoader, extensions, EmitterExtension.class);
+            this.extensions.addAll(loadInstances(classLoader, extensions, EmitterExtension.class));
+        }
+        if (extensionsWithConfiguration != null) {
+            for (ConfiguredExtension configuredExtension : extensionsWithConfiguration) {
+                final EmitterExtension emitterExtension = loadInstance(classLoader, configuredExtension.className, EmitterExtension.class);
+                if (emitterExtension instanceof Extension) {
+                    final Extension extension = (Extension) emitterExtension;
+                    extension.setConfiguration(Utils.mapFromNullable(configuredExtension.configuration));
+                }
+                this.extensions.add(emitterExtension);
+            }
         }
     }
 
@@ -218,6 +235,9 @@ public class Settings {
         if (mapClasses == ClassMapping.asClasses && outputFileType != TypeScriptFileType.implementationFile) {
             throw new RuntimeException("'mapClasses' parameter is set to 'asClasses' which generates runtime code but 'outputFileType' parameter is not set to 'implementationFile'.");
         }
+        if (mapClassesAsClassesPatterns != null && mapClasses != ClassMapping.asClasses) {
+            throw new RuntimeException("'mapClassesAsClassesPatterns' parameter can only be used when 'mapClasses' parameter is set to 'asClasses'.");
+        }
         if (generateJaxrsApplicationClient && outputFileType != TypeScriptFileType.implementationFile) {
             throw new RuntimeException("'generateJaxrsApplicationClient' can only be used when generating implementation file ('outputFileType' parameter is 'implementationFile').");
         }
@@ -236,9 +256,6 @@ public class Settings {
         }
         if (restOptionsType != null && !generateJaxrs) {
             throw new RuntimeException("'restOptionsType' parameter can only be used when generating JAX-RS client or interface.");
-        }
-        if (experimentalJsonDeserialization && disableTaggedUnions) {
-            throw new RuntimeException("'experimentalJsonDeserialization' parameter cannot be used when `disableTaggedUnions` is true.");
         }
         if (generateNpmPackageJson && outputKind != TypeScriptOutputKind.module) {
             throw new RuntimeException("'generateNpmPackageJson' can only be used when generating proper module ('outputKind' parameter is 'module').");
@@ -299,13 +316,27 @@ public class Settings {
 
     public static Predicate<String> createExcludeFilter(List<String> excludedClasses, List<String> excludedClassPatterns) {
         final Set<String> names = new LinkedHashSet<>(excludedClasses != null ? excludedClasses : Collections.<String>emptyList());
-        final List<Pattern> patterns = Input.globsToRegexps(excludedClassPatterns != null ? excludedClassPatterns : Collections.<String>emptyList());
+        final List<Pattern> patterns = Utils.globsToRegexps(excludedClassPatterns != null ? excludedClassPatterns : Collections.<String>emptyList());
         return new Predicate<String>() {
             @Override
             public boolean test(String className) {
-                return names.contains(className) || Input.classNameMatches(className, patterns);
+                return names.contains(className) || Utils.classNameMatches(className, patterns);
             }
         };
+    }
+
+    public Predicate<String> getMapClassesAsClassesFilter() {
+        if (mapClassesAsClassesFilter == null) {
+            final List<Pattern> patterns = Utils.globsToRegexps(mapClassesAsClassesPatterns);
+            mapClassesAsClassesFilter = new Predicate<String>() {
+                @Override
+                public boolean test(String className) {
+                    return mapClasses == ClassMapping.asClasses &&
+                            (patterns == null || Utils.classNameMatches(className, patterns));
+                }
+            };
+        }
+        return mapClassesAsClassesFilter;
     }
 
     public void setJaxrsNamespacingAnnotation(ClassLoader classLoader, String jaxrsNamespacingAnnotation) {

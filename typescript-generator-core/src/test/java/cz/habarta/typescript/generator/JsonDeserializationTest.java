@@ -4,12 +4,15 @@ package cz.habarta.typescript.generator;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import cz.habarta.typescript.generator.ext.AxiosClientExtension;
+import cz.habarta.typescript.generator.ext.JsonDeserializationExtension;
 import cz.habarta.typescript.generator.util.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -21,7 +24,7 @@ public class JsonDeserializationTest {
         settings.outputKind = TypeScriptOutputKind.module;
         settings.outputFileType = TypeScriptFileType.implementationFile;
         settings.mapClasses = ClassMapping.asClasses;
-        settings.experimentalJsonDeserialization = true;
+        settings.extensions.add(new JsonDeserializationExtension());
         final File actualFile = new File("target/JsonDeserializationTest-actual.ts");
         new TypeScriptGenerator(settings).generateTypeScript(Input.from(User.class), Output.to(actualFile));
         final List<String> actualLines = Files.readAllLines(actualFile.toPath(), StandardCharsets.UTF_8);
@@ -45,6 +48,23 @@ public class JsonDeserializationTest {
         for (String notFoundLine : notFoundLines) {
             System.out.println(notFoundLine);
         }
+        Assert.assertEquals(0, notFoundLines.size());
+    }
+
+    @Test
+    public void jaxrsApplicationClientTest() {
+        final Settings settings = TestUtils.settings();
+        settings.outputFileType = TypeScriptFileType.implementationFile;
+        settings.outputKind = TypeScriptOutputKind.module;
+        settings.mapClasses = ClassMapping.asClasses;
+        settings.extensions.add(new JsonDeserializationExtension(/*useJsonDeserializationInJaxrsApplicationClient*/true));
+        settings.extensions.add(new AxiosClientExtension());
+//        final File actualFile = new File("target/JaxrsWithJsonDeserialization-actual.ts");
+//        new TypeScriptGenerator(settings).generateTypeScript(Input.from(JaxrsApplicationTest.OrganizationApplication.class), Output.to(actualFile));
+        final String output = new TypeScriptGenerator(settings).generateTypeScript(Input.from(JaxrsApplicationTest.OrganizationApplication.class));
+        Assert.assertTrue(output.contains("copyFn: Organization.fromData"));
+        Assert.assertTrue(output.contains("copyFn: undefined"));
+        Assert.assertTrue(output.contains("copyFn: __getCopyArrayFn(Organization.fromData)"));
     }
 
     private static class User {
@@ -57,6 +77,9 @@ public class JsonDeserializationTest {
         public Map<String, Address> taggedAddresses;
         public Map<String, List<Address>> groupedAddresses;
         public List<Map<String, Address>> listOfTaggedAddresses;
+        public List<String> tags;
+        public Map<String, String> mapping;
+        public List<List<String>> listOfListOfString;
         public PagedList<Order, Authentication> orders;
         public List<PagedList<Order, Authentication>> allOrders;
         public Shape shape;
@@ -111,4 +134,5 @@ public class JsonDeserializationTest {
     private static class ShapeMetadata {
         public String group;
     }
+
 }

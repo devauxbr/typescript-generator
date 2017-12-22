@@ -3,6 +3,7 @@ package cz.habarta.typescript.generator.gradle;
 
 import cz.habarta.typescript.generator.*;
 import cz.habarta.typescript.generator.Input;
+import cz.habarta.typescript.generator.util.Utils;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -43,6 +44,7 @@ public class GenerateTask extends DefaultTask {
     public EnumMapping mapEnum;
     public boolean nonConstEnums;
     public ClassMapping mapClasses;
+    public List<String> mapClassesAsClassesPatterns;
     public boolean disableTaggedUnions;
     public boolean ignoreSwaggerAnnotations;
     public boolean generateJaxrsApplicationInterface;
@@ -57,6 +59,8 @@ public class GenerateTask extends DefaultTask {
     public boolean noFileComment;
     public List<File> javadocXmlFiles;
     public List<String> extensionClasses;
+    public List<String> extensions;
+    public List<Settings.ConfiguredExtension> extensionsWithConfiguration;
     public List<String> optionalAnnotations;
     public boolean generateNpmPackageJson;
     public String npmName;
@@ -82,9 +86,11 @@ public class GenerateTask extends DefaultTask {
 
         // class loader
         final List<URL> urls = new ArrayList<>();
-        for (Task task : getProject().getTasksByName("compileJava", false)) {
-            for (File file : task.getOutputs().getFiles()) {
-                urls.add(file.toURI().toURL());
+        for (String taskName: Arrays.asList("compileJava", "compileGroovy")) {
+            for (Task task : getProject().getTasksByName(taskName, false)) {
+                for (File file : task.getOutputs().getFiles()) {
+                    urls.add(file.toURI().toURL());
+                }
             }
         }
         for (File file : getProject().getConfigurations().getAt("compile").getFiles()) {
@@ -120,6 +126,7 @@ public class GenerateTask extends DefaultTask {
         settings.mapEnum = mapEnum;
         settings.nonConstEnums = nonConstEnums;
         settings.mapClasses = mapClasses;
+        settings.mapClassesAsClassesPatterns = mapClassesAsClassesPatterns;
         settings.disableTaggedUnions = disableTaggedUnions;
         settings.ignoreSwaggerAnnotations = ignoreSwaggerAnnotations;
         settings.generateJaxrsApplicationInterface = generateJaxrsApplicationInterface;
@@ -133,12 +140,12 @@ public class GenerateTask extends DefaultTask {
         settings.sortTypeDeclarations = sortTypeDeclarations;
         settings.noFileComment = noFileComment;
         settings.javadocXmlFiles = javadocXmlFiles;
-        settings.loadExtensions(classLoader, extensionClasses);
+        settings.loadExtensions(classLoader, Utils.concat(extensionClasses, extensions), extensionsWithConfiguration);
         settings.loadIncludePropertyAnnotations(classLoader, includePropertyAnnotations);
         settings.loadOptionalAnnotations(classLoader, optionalAnnotations);
         settings.generateNpmPackageJson = generateNpmPackageJson;
-        settings.npmName = npmName != null && generateNpmPackageJson ? getProject().getName() : npmName;
-        settings.npmVersion = npmVersion != null && generateNpmPackageJson ? settings.getDefaultNpmVersion() : npmVersion;
+        settings.npmName = npmName == null && generateNpmPackageJson ? getProject().getName() : npmName;
+        settings.npmVersion = npmVersion == null && generateNpmPackageJson ? settings.getDefaultNpmVersion() : npmVersion;
         settings.setStringQuotes(stringQuotes);
         settings.setIndentString(indentString);
         settings.displaySerializerWarning = displaySerializerWarning;
