@@ -8,6 +8,8 @@ Quick links:
 [Breaking changes](https://github.com/vojtechhabarta/typescript-generator/wiki/Breaking-Changes)
 |
 [Release notes](https://github.com/vojtechhabarta/typescript-generator/releases)
+|
+[Playground _(beta)_](https://jechlin.github.io/ts-gen-aws/)
 
 typescript-generator
 ====================
@@ -108,6 +110,9 @@ generateTypeScript {
 }
 ```
 
+You can run typescript-generator on demand using `gradle generateTypeScript` command
+or you can invoke it as part of another task by adding dependency from that task to `generateTypeScript` task in Gradle build file.
+
 More complete sample can be found [here](sample-gradle).
 Gradle plugin has the same features as Maven plugin, for detailed description see Maven generated [site](http://vojtechhabarta.github.io/typescript-generator/maven/typescript-generator-maven-plugin/generate-mojo.html). 
 
@@ -188,7 +193,8 @@ Links
 Contributing
 ------------
 
-- this project targets Java 7
+- current major version supports Java 8 and 9 (version 1 supported Java 7 and 8)
+- build currently only works on Java 8 (JAXB Maven plugin is not compatible with Java 9 yet)
 - keep pull requests small and focused ([10 tips for better Pull Requests](http://blog.ploeh.dk/2015/01/15/10-tips-for-better-pull-requests/))
 - do not add dependencies unless previously discussed in issue
 

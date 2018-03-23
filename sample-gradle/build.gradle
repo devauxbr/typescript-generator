@@ -1,38 +1,56 @@
 
 apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'kotlin'
+apply plugin: 'scala'
 apply plugin: 'cz.habarta.typescript-generator'
 
-
-version = '1.0'
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+version = '2.0'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
-    mavenCentral()
+    jcenter()
 }
+
 dependencies {
-    compile group: 'com.fasterxml.jackson.jaxrs', name: 'jackson-jaxrs-json-provider', version: '2.6.3'
+    compile 'com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.9.2'
+    compile 'org.codehaus.groovy:groovy-all:2.4.13'
+    compile 'org.scala-lang:scala-library:2.12.4'
 }
 
 buildscript {
     repositories {
-//        mavenCentral()
         mavenLocal()
+        jcenter()
     }
+
     dependencies {
-        classpath group: 'cz.habarta.typescript-generator', name: 'typescript-generator-gradle-plugin', version: '1.+'
+        classpath 'cz.habarta.typescript-generator:typescript-generator-gradle-plugin:2.+'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.2.10'
+        classpath 'com.fasterxml.jackson.module:jackson-module-scala_2.12:2.9.2'
     }
 }
 
 generateTypeScript {
-    outputFile = 'build/sample.d.ts'
     classes = [
-        'cz.habarta.typescript.generator.sample.Person'
+        'cz.habarta.typescript.generator.sample.Person',
+        'cz.habarta.typescript.generator.sample.PersonGroovy',
+        'cz.habarta.typescript.generator.sample.PersonKt',
+        'cz.habarta.typescript.generator.sample.PersonScala',
     ]
     jsonLibrary = 'jackson2'
-    outputKind = 'global'
-    namespace = 'GradleSample';
-//    declarePropertiesAsOptional = false
-//    removeTypeNameSuffix = 'Json'
-//    mapDate = 'asNumber'
+    outputKind = 'module'
+    excludeClasses = [
+        'groovy.lang.GroovyObject',
+        'java.io.Serializable',
+        'scala.Equals',
+        'scala.Product',
+        'scala.Serializable',
+    ]
+    jackson2Modules = [
+        'com.fasterxml.jackson.module.scala.DefaultScalaModule'
+    ]
 }
+
+build.dependsOn generateTypeScript
