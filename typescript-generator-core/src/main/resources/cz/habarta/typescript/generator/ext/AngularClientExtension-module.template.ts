@@ -1,5 +1,6 @@
 
 @NgModule({
+    imports: [HttpClientModule],
     providers: []
 })
 export class RestClientModule {

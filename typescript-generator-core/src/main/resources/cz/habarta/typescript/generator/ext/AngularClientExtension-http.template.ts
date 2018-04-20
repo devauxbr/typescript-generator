@@ -1,5 +1,5 @@
 import {Injectable, NgModule} from "@angular/core";
-import {HttpClient as AngularClient, HttpParams} from "@angular/common/http";
+import {HttpClientModule, HttpClient as AngularClient, HttpParams} from "@angular/common/http";
 import {Observable} from "rxjs/Observable";
 import 'rxjs/add/operator/map';
 
@@ -13,7 +13,15 @@ export class AngularHttpClient implements HttpClient {
         if (requestConfig.queryParams) {
             let httpParams = new HttpParams();
             Object.keys(requestConfig.queryParams).forEach(key => {
-                httpParams = httpParams.set(key, requestConfig.queryParams[key]);
+                const value = requestConfig.queryParams[key];
+
+                if (value instanceof Array) {
+                    (value as Array<any>).forEach((arrayValue) => {
+                        httpParams = httpParams.append(key, arrayValue);
+                    })
+                } else {
+                    httpParams = httpParams.set(key, value);
+                }
             });
             options.params = httpParams;
         }

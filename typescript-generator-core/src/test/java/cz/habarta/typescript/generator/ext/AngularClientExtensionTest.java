@@ -29,8 +29,11 @@ public class AngularClientExtensionTest {
         Assert.assertTrue(errorMessage, output.contains("class AngularHttpClient implements HttpClient"));
         Assert.assertTrue(errorMessage, output.contains("constructor(private http: AngularClient) {}"));
         Assert.assertTrue(errorMessage, output.contains("public request(requestConfig: { method: string; url: string; queryParams?: any; data?: any }): RestResponse<any>"));
-        Assert.assertTrue(errorMessage, output.contains("Object.keys(requestConfig.queryParams).forEach(key"));
-        Assert.assertTrue(errorMessage, output.contains("httpParams = httpParams.set(key, requestConfig.queryParams[key])"));
+        Assert.assertTrue(errorMessage, output.contains("const value = requestConfig.queryParams[key];"));
+        Assert.assertTrue(errorMessage, output.contains("if (value instanceof Array) {"));
+        Assert.assertTrue(errorMessage, output.contains("(value as Array<any>).forEach((arrayValue) => {"));
+        Assert.assertTrue(errorMessage, output.contains("} else {"));
+        Assert.assertTrue(errorMessage, output.contains("httpParams = httpParams.set(key, value);"));
         Assert.assertTrue(errorMessage, output.contains("options.params = httpParams"));
         Assert.assertTrue(errorMessage, output.contains("options.body = requestConfig.data"));
         Assert.assertTrue(errorMessage, output.contains("return this.http.request(requestConfig.method, requestConfig.url, options)"));
